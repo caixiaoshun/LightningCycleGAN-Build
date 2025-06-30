@@ -1,0 +1,32 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: cycle-gan
+  - override /model: cycle-gan
+  - override /callbacks: default
+  - override /trainer: gpu
+  - override /logger: tensorboard
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["cycle-gan", "iphone2dslr_flower"]
+
+seed: 44
+
+
+
+model:
+  sample_image_a: "data/iphone2dslr_flower/testA/00000.jpg"
+  sample_image_b: "data/iphone2dslr_flower/testB/2010-07-05 22:14:10.jpg"
+  img_size: 256
+
+data:
+  data_dir: data/iphone2dslr_flower
+
+logger:
+  tensorboard:
+    name: cycle-gan-iphone2dslr_flower

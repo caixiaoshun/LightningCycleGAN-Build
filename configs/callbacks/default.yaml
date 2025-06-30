@@ -1,0 +1,19 @@
+defaults:
+  - model_summary
+  - rich_progress_bar
+  - model_checkpoint
+  - _self_
+
+model_checkpoint:
+  save_last: True
+  dirpath: ${paths.output_dir}/checkpoints
+  filename: "{epoch:03d}_{loss_total_generator:.2f}"
+  save_top_k: 10
+  monitor: "loss_total_generator"
+  mode: "min"
+  auto_insert_metric_name: True
+  save_weights_only: True
+
+
+model_summary:
+  max_depth: -1

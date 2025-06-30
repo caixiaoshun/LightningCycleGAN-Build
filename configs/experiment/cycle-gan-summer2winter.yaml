@@ -1,0 +1,32 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: cycle-gan
+  - override /model: cycle-gan
+  - override /callbacks: default
+  - override /trainer: gpu
+  - override /logger: tensorboard
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["cycle-gan", "summer2winter"]
+
+seed: 44
+
+
+
+model:
+  sample_image_a: "data/summer2winter_yosemite/testA/2010-09-07 12:23:20.jpg"
+  sample_image_b: "data/summer2winter_yosemite/testB/2006-04-11 11:21:20.jpg"
+  img_size: 256
+
+data:
+  data_dir: data/summer2winter_yosemite
+
+logger:
+  tensorboard:
+    name: cycle-gan-summer2winter
