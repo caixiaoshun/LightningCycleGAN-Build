@@ -1,6 +1,6 @@
 _target_: src.models.gan_module.GANLitModule
 
-max_epoch: 300
+max_epoch: 1000
 sample_image_a: "data/summer2winter_yosemite/testA/2010-09-07 12:23:20.jpg"
 sample_image_b: "data/summer2winter_yosemite/testB/2006-04-11 11:21:20.jpg"
 img_size: 256
