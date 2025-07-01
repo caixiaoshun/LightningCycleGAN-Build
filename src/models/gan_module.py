@@ -92,7 +92,7 @@ class GANLitModule(LightningModule):
         output_a_2_b = self.generator_a_2_b(image_a)
 
         labels_real = (
-            torch.empty(size=(batch_size, 1)).uniform_(0.9, 1.1).type_as(image_a)
+            torch.empty(size=(batch_size, 1)).uniform_(0.9, 1).type_as(image_a)
         )
 
         loss_a_2_b = F.mse_loss(self.discriminator_a_2_b(output_a_2_b), labels_real)
@@ -129,10 +129,15 @@ class GANLitModule(LightningModule):
 
         discriminator__a_b_output = self.discriminator_a_2_b(output_a_2_b.detach())
         label_fake = (
-            torch.empty(size=(batch_size, 1)).type_as(image_a).uniform_(-0.1, 0.1)
+            torch.empty(size=(batch_size, 1)).type_as(image_a).uniform_(0, 0.1)
         )
-        loss_d_a_b = F.mse_loss(discriminator__a_b_output, label_fake)
+        
+        discriminator_a_2_b_real_output = self.discriminator_a_2_b(image_b)
+        
+        loss_d_a_b = F.mse_loss(discriminator__a_b_output, label_fake) + F.mse_loss(discriminator_a_2_b_real_output, labels_real)
 
+        loss_d_a_b = loss_d_a_b * 0.5
+        
         self.manual_backward(loss_d_a_b)
         optimizer_d_a_2_b.step()
         optimizer_d_a_2_b.zero_grad()
@@ -143,16 +148,19 @@ class GANLitModule(LightningModule):
         self.toggle_optimizer(optimizer_d_b_2_a)
 
         discriminator_b_a_output = self.discriminator_b_2_a(output_b_2_a.detach())
+        
+        discriminator_b_2_a_real_output = self.discriminator_b_2_a(image_a)
 
-        loss_d_b_a = F.mse_loss(discriminator_b_a_output, label_fake)
+        loss_d_b_a = F.mse_loss(discriminator_b_a_output, label_fake) + F.mse_loss(discriminator_b_2_a_real_output, labels_real)
+        
+        loss_d_b_a = loss_d_b_a * 0.5
 
         self.manual_backward(loss_d_b_a)
         optimizer_d_b_2_a.step()
         optimizer_d_b_2_a.zero_grad()
         self.untoggle_optimizer(optimizer_d_b_2_a)
 
-    
-        current_lr = optimizer_g_en.param_groups[0]['lr']
+        current_lr = optimizer_g_en.param_groups[0]["lr"]
         loss_dict = dict(
             loss_a_2_a=loss_a_2_a,
             loss_b_2_b=loss_b_2_b,
@@ -163,9 +171,9 @@ class GANLitModule(LightningModule):
             loss_total_generator=loss_total_generator,
             loss_d_a_b=loss_d_a_b,
             loss_d_b_a=loss_d_b_a,
-            lr=current_lr
+            lr=current_lr,
         )
-        
+
         self.log_dict(loss_dict, prog_bar=True, logger=True)
 
     def on_train_epoch_end(self) -> None:
@@ -200,9 +208,7 @@ class GANLitModule(LightningModule):
         sample_b = self.process_sample_img(self.sample_image_b, device=device)
         sample_b_2_a = self.generator_b_2_a(sample_b)
         sample_b_2_a = self.norm_image(sample_b_2_a)
-        
-        
-        
+
         self.logger.experiment.add_image(
             "train/sample_a_2_b", sample_a_2_b[0], self.current_epoch
         )
@@ -245,39 +251,40 @@ class GANLitModule(LightningModule):
 
         :return: A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
-        optimizer_g_en = torch.optim.AdamW(
+        optimizer_g_en = torch.optim.Adam(
             itertools.chain(
                 self.generator_a_2_b.parameters(), self.generator_b_2_a.parameters()
             ),
-            lr=1e-3,
+            lr=2e-4,
+            betas=(0.5, 0.999)
         )
 
-        optimizer_d_a_2_b = torch.optim.AdamW(
-            self.discriminator_a_2_b.parameters(), lr=1e-3
+        optimizer_d_a_2_b = torch.optim.Adam(
+            self.discriminator_a_2_b.parameters(), lr=2e-4, betas=(0.5, 0.999)
         )
-        optimizer_d_b_2_a = torch.optim.AdamW(
-            self.discriminator_b_2_a.parameters(), lr=1e-3
+        optimizer_d_b_2_a = torch.optim.Adam(
+            self.discriminator_b_2_a.parameters(), lr=2e-4, betas=(0.5, 0.999)
         )
 
         schedule_fn = partial(
             torch.optim.lr_scheduler.CosineAnnealingLR, T_max=self.max_epoch, eta_min=0
         )
-        
+
         # 将调度器包装在字典中，并指定 interval='epoch'
         scheduler_g_en = {
-            'scheduler': schedule_fn(optimizer=optimizer_g_en),
-            'interval': 'epoch',  # <--- 关键改动
-            'frequency': 1
+            "scheduler": schedule_fn(optimizer=optimizer_g_en),
+            "interval": "epoch",  # <--- 关键改动
+            "frequency": 1,
         }
         scheduler_d_a_2_b = {
-            'scheduler': schedule_fn(optimizer=optimizer_d_a_2_b),
-            'interval': 'epoch',  # <--- 关键改动
-            'frequency': 1
+            "scheduler": schedule_fn(optimizer=optimizer_d_a_2_b),
+            "interval": "epoch",  # <--- 关键改动
+            "frequency": 1,
         }
         scheduler_d_b_2_a = {
-            'scheduler': schedule_fn(optimizer=optimizer_d_b_2_a),
-            'interval': 'epoch',  # <--- 关键改动
-            'frequency': 1
+            "scheduler": schedule_fn(optimizer=optimizer_d_b_2_a),
+            "interval": "epoch",  # <--- 关键改动
+            "frequency": 1,
         }
 
         return [
